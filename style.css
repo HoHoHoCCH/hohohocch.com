@@ -772,3 +772,738 @@ body::after {
     opacity: 0.35;
   }
 }
+
+.slots-page {
+  --slots-bg: #0a0f12;
+  --slots-panel: rgba(9, 14, 17, 0.72);
+  --slots-panel-strong: rgba(8, 12, 15, 0.88);
+  --slots-line: rgba(111, 255, 181, 0.18);
+  --slots-line-strong: rgba(176, 255, 218, 0.34);
+  --slots-text: rgba(248, 250, 255, 0.94);
+  --slots-muted: rgba(224, 231, 240, 0.72);
+  --slots-faint: rgba(220, 230, 240, 0.5);
+  --slots-green: #42f59b;
+  --slots-green-soft: rgba(66, 245, 155, 0.16);
+  background:
+    radial-gradient(circle at 50% 9%, rgba(243, 248, 255, 0.12), transparent 12rem),
+    radial-gradient(circle at 52% 38%, rgba(66, 245, 155, 0.08), transparent 24rem),
+    var(--slots-bg);
+  overflow-x: hidden;
+}
+
+.slots-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(66, 245, 155, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(66, 245, 155, 0.045) 1px, transparent 1px),
+    radial-gradient(circle at 16% 17%, rgba(66, 245, 155, 0.4) 0 3px, transparent 4px),
+    radial-gradient(circle at 75% 7%, rgba(66, 245, 155, 0.42) 0 2px, transparent 3px),
+    radial-gradient(circle at 74% 30%, rgba(66, 245, 155, 0.65) 0 4px, transparent 5px),
+    radial-gradient(circle at 94% 51%, rgba(66, 245, 155, 0.24) 0 4px, transparent 5px),
+    radial-gradient(circle at 18% 63%, rgba(66, 245, 155, 0.8) 0 3px, transparent 4px);
+  background-size:
+    32px 32px,
+    32px 32px,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto;
+  opacity: 0.58;
+}
+
+.slots-page::after {
+  opacity: 0.2;
+}
+
+.slots-page #bg {
+  opacity: 0.55;
+}
+
+.slots-nav,
+.slots-shell,
+.slots-footer {
+  position: relative;
+  z-index: 2;
+}
+
+.slots-nav,
+.slots-footer {
+  width: min(100% - 48px, 1250px);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.slots-nav {
+  min-height: 58px;
+}
+
+.slots-wordmark,
+.slots-title {
+  color: var(--slots-text);
+  font-weight: 500;
+  letter-spacing: 0.42em;
+  text-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.24),
+    0 0 22px rgba(255, 255, 255, 0.22);
+}
+
+.slots-wordmark {
+  font-size: clamp(1.2rem, 3vw, 1.72rem);
+  line-height: 1;
+}
+
+.slots-navlinks {
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 3vw, 34px);
+  color: var(--slots-text);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.slots-navlinks a {
+  transition:
+    color 120ms ease,
+    text-shadow 120ms ease;
+}
+
+.slots-navlinks a:hover {
+  color: var(--slots-green);
+  text-shadow: 0 0 16px rgba(66, 245, 155, 0.42);
+}
+
+.slots-shell {
+  width: min(100% - 48px, 1180px);
+  margin: 0 auto;
+  padding: 42px 0 34px;
+  display: grid;
+  gap: 10px;
+}
+
+.slots-hero {
+  min-height: 635px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 28px;
+}
+
+.slots-logo {
+  width: clamp(142px, 22vw, 220px);
+  filter:
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.7))
+    drop-shadow(0 0 28px rgba(255, 255, 255, 0.18))
+    drop-shadow(0 0 42px rgba(66, 245, 155, 0.12));
+}
+
+.slots-logo-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.slots-logo-outline,
+.slots-logo-line,
+.slots-logo-fill {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.slots-logo-outline {
+  stroke: rgba(255, 255, 255, 0.96);
+  stroke-width: 7;
+}
+
+.slots-logo-line {
+  stroke: var(--slots-green);
+  stroke-width: 7;
+}
+
+.slots-logo-fill {
+  fill: rgba(66, 245, 155, 0.78);
+  stroke: none;
+}
+
+.slots-title {
+  margin: 28px 0 0;
+  font-family: var(--mono);
+  font-size: clamp(4.4rem, 12vw, 7.25rem);
+  line-height: 0.9;
+}
+
+.slots-subtitle {
+  margin: 30px 0 0;
+  color: var(--slots-text);
+  font-size: clamp(1.05rem, 2vw, 1.48rem);
+  text-shadow: 0 0 16px rgba(255, 255, 255, 0.14);
+}
+
+.slots-subtitle span,
+.slots-green,
+.slots-prompt,
+.slots-panel h2,
+.slots-step h3,
+.slots-step h3 span,
+.slots-tree p:not(:first-child),
+.slots-git h3,
+.slots-help strong,
+.slots-footer p a {
+  color: var(--slots-green);
+}
+
+.slots-terminal,
+.slots-note,
+.slots-tree {
+  border: 1px solid var(--slots-line-strong);
+  background:
+    linear-gradient(180deg, rgba(13, 20, 24, 0.9), rgba(7, 10, 13, 0.86));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.015),
+    0 18px 46px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.slots-terminal {
+  display: block;
+  text-align: left;
+  color: var(--slots-text);
+  padding: 14px 18px;
+  font-size: 0.96rem;
+  line-height: 1.4;
+}
+
+.slots-hero-terminal {
+  margin-top: 36px;
+  width: min(100%, 640px);
+  padding: 18px 24px;
+  font-size: clamp(1rem, 2vw, 1.22rem);
+}
+
+.slots-prompt {
+  margin-right: 10px;
+}
+
+.slots-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin-top: 42px;
+}
+
+.slots-button {
+  min-width: 148px;
+  min-height: 62px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  color: var(--slots-text);
+  font-size: 1.05rem;
+  font-weight: 800;
+  border: 1px solid var(--slots-line-strong);
+  border-radius: 5px;
+  background: rgba(11, 17, 20, 0.9);
+  box-shadow:
+    0 0 30px rgba(255, 255, 255, 0.06),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.slots-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(66, 245, 155, 0.62);
+}
+
+.slots-button-primary {
+  color: #071410;
+  background: linear-gradient(135deg, #33ed91, #69f7b8);
+  border-color: rgba(66, 245, 155, 0.76);
+  box-shadow:
+    0 0 30px rgba(66, 245, 155, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.slots-button-icon,
+.slots-install-card svg,
+.slots-tree svg,
+.slots-robot svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.slots-button-primary .slots-button-icon {
+  stroke-width: 2.2;
+}
+
+.slots-panel {
+  border: 1px solid var(--slots-line);
+  border-radius: 4px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.035), transparent 24rem),
+    var(--slots-panel);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.015),
+    0 20px 60px rgba(0, 0, 0, 0.22);
+  padding: 28px 34px;
+}
+
+.slots-panel h2,
+.slots-panel h3,
+.slots-panel p {
+  margin: 0;
+}
+
+.slots-panel h2 {
+  font-size: 1.24rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.slots-problem-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.88fr);
+  align-items: center;
+  gap: clamp(36px, 7vw, 82px);
+  margin-top: 24px;
+}
+
+.slots-tree {
+  padding: 20px 36px;
+  min-height: 212px;
+  color: var(--slots-text);
+  font-weight: 700;
+}
+
+.slots-tree p {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  line-height: 1.58;
+}
+
+.slots-tree span {
+  min-width: 38px;
+  color: var(--slots-text);
+}
+
+.slots-tree svg {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 auto;
+  stroke: var(--slots-green);
+}
+
+.slots-problem-copy p {
+  color: var(--slots-text);
+  font-size: clamp(1.82rem, 4vw, 2.72rem);
+  font-weight: 800;
+  line-height: 1.18;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.14);
+}
+
+.slots-problem-copy span {
+  display: block;
+  margin-top: 18px;
+  color: var(--slots-muted);
+  font-size: 1.02rem;
+}
+
+.slots-problem-copy strong {
+  color: var(--slots-green);
+  font-weight: 700;
+}
+
+.slots-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+  margin-top: 34px;
+}
+
+.slots-step {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.slots-step h3 {
+  font-size: 1.04rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.slots-step h3 span {
+  margin-right: 14px;
+}
+
+.slots-step p,
+.slots-git p,
+.slots-install-card p,
+.slots-help p {
+  color: var(--slots-muted);
+}
+
+.slots-note {
+  min-height: 124px;
+  padding: 12px 16px;
+}
+
+.slots-note p {
+  color: var(--slots-text);
+  line-height: 1.45;
+}
+
+.slots-timeline {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: start;
+  gap: 16px;
+  margin-top: 50px;
+  padding: 0 22px 6px;
+}
+
+.slots-timeline-line {
+  position: absolute;
+  left: 64px;
+  right: 64px;
+  top: 7px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(66, 245, 155, 0.9) 0 74%, rgba(244, 249, 255, 0.6) 74%);
+  box-shadow: 0 0 18px rgba(66, 245, 155, 0.3);
+}
+
+.slots-time {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.slots-time span {
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--slots-bg);
+  border: 3px solid rgba(224, 231, 240, 0.72);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.16);
+}
+
+.slots-time.active span {
+  background: var(--slots-green);
+  border-color: var(--slots-green);
+  box-shadow:
+    0 0 0 4px rgba(66, 245, 155, 0.22),
+    0 0 28px rgba(66, 245, 155, 0.52);
+}
+
+.slots-time strong {
+  color: var(--slots-text);
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.slots-time small {
+  color: var(--slots-muted);
+  font-size: 0.85rem;
+}
+
+.slots-git {
+  padding-top: 44px;
+  padding-bottom: 48px;
+}
+
+.slots-git h2 {
+  color: var(--slots-text);
+  font-size: 1.5rem;
+  margin-bottom: 34px;
+}
+
+.slots-git-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr);
+  gap: 34px;
+  align-items: center;
+  padding: 0 26px;
+}
+
+.slots-git h3 {
+  font-size: 1.02rem;
+  margin-bottom: 4px;
+}
+
+.slots-git .slots-terminal {
+  margin-top: 20px;
+}
+
+.slots-arrow {
+  color: var(--slots-muted);
+  font-size: 2.4rem;
+  text-align: center;
+  font-weight: 300;
+}
+
+.slots-ai {
+  position: relative;
+  min-height: 170px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  align-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 82% 45%, rgba(66, 245, 155, 0.12), transparent 17rem),
+    var(--slots-panel);
+}
+
+.slots-ai h2 {
+  color: var(--slots-text);
+}
+
+.slots-ai .slots-terminal {
+  width: min(100%, 410px);
+  margin-top: 18px;
+}
+
+.slots-ai p {
+  color: var(--slots-green);
+  margin-top: 14px;
+}
+
+.slots-robot {
+  align-self: end;
+  color: rgba(66, 245, 155, 0.28);
+}
+
+.slots-robot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  stroke-width: 1.45;
+}
+
+.slots-robot circle:nth-of-type(2),
+.slots-robot circle:nth-of-type(3) {
+  fill: var(--slots-green);
+  stroke: none;
+  filter: drop-shadow(0 0 8px rgba(66, 245, 155, 0.72));
+}
+
+.slots-install-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 44px;
+  margin-top: 22px;
+}
+
+.slots-install-card {
+  min-height: 104px;
+  padding: 0 24px 0 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.slots-install-card:last-child {
+  border-right: 0;
+}
+
+.slots-install-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: var(--slots-green);
+  font-size: 1.04rem;
+  margin-bottom: 18px;
+}
+
+.slots-install-card svg {
+  width: 31px;
+  height: 31px;
+  color: var(--slots-green);
+  stroke-width: 1.8;
+}
+
+.slots-install-card p {
+  font-size: 0.9rem;
+  padding-left: 46px;
+}
+
+.slots-install-card .slots-terminal {
+  padding: 10px 13px;
+  font-size: 0.87rem;
+}
+
+.slots-install-card small {
+  color: var(--slots-muted);
+}
+
+.slots-help {
+  padding-top: 15px;
+  padding-bottom: 16px;
+}
+
+.slots-help p,
+.slots-help strong {
+  display: block;
+  line-height: 1.4;
+}
+
+.slots-footer {
+  min-height: 64px;
+  border-top: 1px solid rgba(111, 255, 181, 0.11);
+  color: var(--slots-muted);
+  font-size: 0.92rem;
+}
+
+.slots-footer p {
+  margin: 0;
+}
+
+.slots-footer .slots-wordmark {
+  font-size: 1.22rem;
+}
+
+@media (max-width: 850px) {
+  .slots-nav,
+  .slots-footer,
+  .slots-shell {
+    width: min(100% - 28px, 1180px);
+  }
+
+  .slots-nav,
+  .slots-footer {
+    flex-wrap: wrap;
+    padding: 16px 0;
+  }
+
+  .slots-shell {
+    padding-top: 38px;
+  }
+
+  .slots-hero {
+    min-height: auto;
+    padding-bottom: 54px;
+  }
+
+  .slots-problem-grid,
+  .slots-steps,
+  .slots-git-grid,
+  .slots-ai,
+  .slots-install-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .slots-panel {
+    padding: 22px;
+  }
+
+  .slots-git-grid {
+    padding: 0;
+  }
+
+  .slots-arrow {
+    transform: rotate(90deg);
+  }
+
+  .slots-ai {
+    gap: 12px;
+  }
+
+  .slots-robot {
+    justify-self: end;
+    width: min(100%, 300px);
+  }
+
+  .slots-install-card {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 0 0 22px;
+  }
+
+  .slots-install-card:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .slots-wordmark,
+  .slots-title {
+    letter-spacing: 0.24em;
+  }
+
+  .slots-title {
+    font-size: clamp(3.3rem, 19vw, 5rem);
+  }
+
+  .slots-navlinks {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .slots-terminal {
+    font-size: 0.82rem;
+    padding: 12px 13px;
+  }
+
+  .slots-actions {
+    gap: 12px;
+  }
+
+  .slots-button {
+    flex: 1 1 150px;
+  }
+
+  .slots-tree {
+    padding: 16px;
+    font-size: 0.82rem;
+  }
+
+  .slots-timeline {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 0;
+    margin-top: 28px;
+  }
+
+  .slots-timeline-line {
+    left: 9px;
+    right: auto;
+    top: 9px;
+    bottom: 40px;
+    width: 1px;
+    height: auto;
+    background: linear-gradient(180deg, rgba(66, 245, 155, 0.9) 0 74%, rgba(244, 249, 255, 0.6) 74%);
+  }
+
+  .slots-time {
+    grid-template-columns: 20px 1fr;
+    justify-items: start;
+    text-align: left;
+    gap: 0 12px;
+  }
+
+  .slots-time span {
+    grid-row: span 2;
+  }
+}

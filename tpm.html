@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TPM Viewer</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000000;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #sim-toggle {
+      position: fixed;
+      right: 16px;
+      top: 16px;
+      z-index: 2;
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(28, 28, 28, 0.9), rgba(8, 8, 8, 0.86));
+      color: #ffffff;
+      font: 600 13px/1.2 system-ui, sans-serif;
+      padding: 10px 14px;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+    }
+
+    #sim-panel {
+      position: fixed;
+      right: 16px;
+      top: 62px;
+      z-index: 2;
+      width: min(260px, calc(100vw - 32px));
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(22, 22, 22, 0.94), rgba(6, 6, 6, 0.9));
+      color: #ffffff;
+      font-family: system-ui, sans-serif;
+      transform: translateX(calc(100% + 24px));
+      transition: transform 160ms ease;
+      backdrop-filter: blur(14px);
+    }
+
+    #sim-panel[data-open="true"] {
+      transform: translateX(0);
+    }
+
+    .sim-title {
+      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .sim-controls {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .sim-controls button,
+    .sim-camera button {
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      font: inherit;
+      padding: 7px 8px;
+      cursor: pointer;
+    }
+
+    .sim-controls button:not(:disabled):hover,
+    .sim-camera button:hover,
+    #sim-toggle:hover {
+      border-color: rgba(255, 209, 102, 0.72);
+      background: rgba(255, 209, 102, 0.12);
+    }
+
+    .sim-controls button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .sim-camera {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .sim-options {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .sim-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 12px;
+    }
+
+    .sim-toggle-row input {
+      width: 34px;
+      height: 18px;
+      accent-color: #ffd166;
+      cursor: pointer;
+    }
+
+    #sim-status {
+      margin: 8px 0 0;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    #guide-card {
+      position: fixed;
+      left: 16px;
+      bottom: 16px;
+      z-index: 2;
+      width: min(340px, calc(100vw - 32px));
+      padding: 14px;
+      border: 1px solid rgba(255, 209, 102, 0.34);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(18, 18, 18, 0.92), rgba(5, 5, 5, 0.88));
+      color: #ffffff;
+      font-family: system-ui, sans-serif;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: opacity 160ms ease, transform 160ms ease;
+      backdrop-filter: blur(14px);
+    }
+
+    #guide-card[data-open="true"] {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    #guide-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    #guide-text {
+      margin: 8px 0 0;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    #minimap-frame {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 1;
+      width: min(190px, 32vw);
+      aspect-ratio: 1;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 8px;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 160ms ease;
+    }
+
+    #minimap-frame[data-open="true"] {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <button id="sim-toggle" type="button" aria-controls="sim-panel" aria-expanded="false">Simulation</button>
+  <aside id="sim-panel" data-open="false">
+    <h1 class="sim-title">TPM Simulation</h1>
+    <div class="sim-controls">
+      <button id="sim-start" type="button">Start</button>
+      <button id="sim-guide" type="button">Guide</button>
+      <button id="sim-pause" type="button" disabled>Pause</button>
+      <button id="sim-reset" type="button">Reset</button>
+    </div>
+    <div class="sim-camera" aria-label="Simulation camera presets">
+      <button id="camera-wide" type="button">Wide</button>
+      <button id="camera-core" type="button">Core</button>
+      <button id="camera-flow" type="button">Flow</button>
+    </div>
+    <p id="sim-status">Ready to inject neutrons into the TPM.</p>
+    <div class="sim-options" aria-label="Simulation display options">
+      <label class="sim-toggle-row">
+        <span>Full rod preview</span>
+        <input id="setting-rod-preview" type="checkbox" />
+      </label>
+      <label class="sim-toggle-row">
+        <span>Reactor channel</span>
+        <input id="setting-reactor-env" type="checkbox" />
+      </label>
+      <label class="sim-toggle-row">
+        <span>Auto rotate</span>
+        <input id="setting-auto-rotate" type="checkbox" />
+      </label>
+      <label class="sim-toggle-row">
+        <span>Auto nod</span>
+        <input id="setting-auto-pan" type="checkbox" />
+      </label>
+      <label class="sim-toggle-row">
+        <span>Bird's-eye minimap</span>
+        <input id="setting-minimap" type="checkbox" />
+      </label>
+    </div>
+  </aside>
+  <div id="minimap-frame" data-open="false" aria-hidden="true"></div>
+  <aside id="guide-card" data-open="false">
+    <h2 id="guide-title">Placeholder title</h2>
+    <p id="guide-text">Placeholder text.</p>
+  </aside>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
