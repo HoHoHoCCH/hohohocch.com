@@ -1422,7 +1422,7 @@ updateSimulationUi();
 const loader = new GLTFLoader();
 
 loader.load(
-  "./model/TPM1.glb",
+  "/assets/models/TPM1.glb",
   (gltf) => {
     const model = gltf.scene;
     simulation.model = model;

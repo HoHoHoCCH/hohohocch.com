@@ -1,0 +1,743 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>TeenTech Board Layout</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 8px; }
+#bar { margin-bottom: 8px; }
+button, input, select { margin-right: 4px; }
+#main { display: flex; height: calc(100vh - 50px); min-height: 300px; }
+#view { flex: 1 1 auto; overflow: auto; border: 1px solid black; min-width: 240px; }
+#splitter { width: 8px; cursor: col-resize; border-top: 1px solid black; border-bottom: 1px solid black; }
+#canvas { position: relative; width: 1600px; height: 800px; background: white; }
+.board {
+  position: absolute;
+  top: 0;
+  height: 800px;
+  border: 1px solid black;
+  background-color: white;
+  background-image:
+    linear-gradient(to right, #777 1px, transparent 1px),
+    linear-gradient(to bottom, #777 1px, transparent 1px),
+    linear-gradient(to right, #ddd 1px, transparent 1px),
+    linear-gradient(to bottom, #ddd 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px, 4px 4px, 4px 4px;
+}
+.board.active { outline: 4px solid blue; z-index: 1; }
+.board-name { position: absolute; left: 4px; top: 4px; background: white; padding: 1px 3px; pointer-events: none; }
+.item { position: absolute; border: 1px solid black; background: white; user-select: none; touch-action: none; z-index: 2; }
+.item.selected { outline: 2px solid black; }
+.item img { width: 100%; height: 100%; display: block; pointer-events: none; user-select: none; }
+.tag { position: absolute; left: 0; bottom: 0; background: white; border-top: 1px solid black; border-right: 1px solid black; padding: 1px 3px; pointer-events: none; }
+.handle { position: absolute; width: 14px; height: 14px; right: -7px; bottom: -7px; border: 1px solid black; background: white; cursor: nwse-resize; }
+#previewView { width: 560px; min-width: 220px; border: 1px solid black; position: relative; overflow: hidden; perspective: 900px; background: white; touch-action: none; user-select: none; }
+#previewStage { position: absolute; left: 50%; top: 50%; width: 560px; height: 280px; transform-style: preserve-3d; }
+.p3d {
+  position: absolute;
+  top: 0;
+  height: 280px;
+  border: 1px solid black;
+  background-color: white;
+  background-image:
+    linear-gradient(to right, #777 1px, transparent 1px),
+    linear-gradient(to bottom, #777 1px, transparent 1px),
+    linear-gradient(to right, #ddd 1px, transparent 1px),
+    linear-gradient(to bottom, #ddd 1px, transparent 1px);
+  background-size: 14px 14px, 14px 14px, 1.4px 1.4px, 1.4px 1.4px;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  backface-visibility: visible;
+}
+.p3d.active { outline: 4px solid blue; }
+.p3d-name { position: absolute; left: 3px; top: 3px; background: white; padding: 1px 3px; z-index: 3; }
+.p3d-item { position: absolute; border: 1px solid black; background: white; }
+.p3d-item img { width: 100%; height: 100%; display: block; }
+#p3d-left { left: 0; width: 140px; transform-origin: right center; transform: rotateY(58deg); }
+#p3d-middle { left: 140px; width: 280px; }
+#p3d-right { left: 420px; width: 140px; transform-origin: left center; transform: rotateY(-58deg); }
+#previewView.hidden, #splitter.hidden { display: none; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <input id="files" type="file" accept="image/*" multiple>
+  <select id="boardSelect">
+    <option value="left">left</option>
+    <option value="middle">middle</option>
+    <option value="right">right</option>
+  </select>
+  <input id="presetName" placeholder="preset">
+  <button id="saveBtn">save</button>
+  <select id="presetList"></select>
+  <button id="loadBtn">load</button>
+  <button id="deleteBtn">delete</button>
+  <button id="clearBtn">clear</button>
+  <button id="previewBtn">hide 3d</button>
+  <button id="reset3dBtn">reset 3d</button>
+  <span id="info">selected: none</span>
+</div>
+<div id="main">
+  <div id="view"><div id="canvas"></div></div>
+  <div id="splitter"></div>
+  <div id="previewView"><div id="previewStage"></div></div>
+</div>
+
+<script>
+const SCALE = 4; // flat: 1 cm = 4 px
+const PREVIEW_SCALE = 1.4; // preview: 1 cm = 1.4 px
+const STORAGE_KEY = "teentech-board-presets-v6";
+const OLD_STORAGE_KEYS = ["teentech-board-presets-v5", "teentech-board-presets-v4", "teentech-board-presets-v3"];
+
+const canvas = document.getElementById("canvas");
+const files = document.getElementById("files");
+const info = document.getElementById("info");
+const boardSelect = document.getElementById("boardSelect");
+const presetName = document.getElementById("presetName");
+const presetList = document.getElementById("presetList");
+const saveBtn = document.getElementById("saveBtn");
+const loadBtn = document.getElementById("loadBtn");
+const deleteBtn = document.getElementById("deleteBtn");
+const clearBtn = document.getElementById("clearBtn");
+const previewBtn = document.getElementById("previewBtn");
+const reset3dBtn = document.getElementById("reset3dBtn");
+const main = document.getElementById("main");
+const splitter = document.getElementById("splitter");
+const previewView = document.getElementById("previewView");
+const previewStage = document.getElementById("previewStage");
+
+const boards = [
+  { name: "left", x: 0, y: 0, w: 100, h: 200 },
+  { name: "middle", x: 100, y: 0, w: 200, h: 200 },
+  { name: "right", x: 300, y: 0, w: 100, h: 200 }
+];
+
+let items = [];
+let selected = null;
+let activeBoardName = "left";
+let addOffsets = {
+  left: { x: 8, y: 8 },
+  middle: { x: 8, y: 8 },
+  right: { x: 8, y: 8 }
+};
+
+const camera = { rotX: 2, rotY: -22, zoom: 1, panX: 0, panY: 0 };
+const previewPointers = new Map();
+let previewGesture = null;
+
+function toPx(cm) { return cm * SCALE; }
+function toCm(px) { return px / SCALE; }
+function toPreviewPx(cm) { return cm * PREVIEW_SCALE; }
+function round(n) { return Math.round(n * 10) / 10; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function boardData(name) { return boards.find(b => b.name === name); }
+function boardEl(name) { return document.querySelector(`.board[data-board="${name}"]`); }
+function previewBoardEl(name) { return document.getElementById("p3d-" + name); }
+
+function applyCamera() {
+  previewStage.style.transform =
+    `translate(-50%, -50%) translate(${camera.panX}px, ${camera.panY}px) ` +
+    `rotateX(${camera.rotX}deg) rotateY(${camera.rotY}deg) scale(${camera.zoom})`;
+}
+
+function resetCamera() {
+  camera.rotX = 2;
+  camera.rotY = -22;
+  camera.zoom = 1;
+  camera.panX = 0;
+  camera.panY = 0;
+  applyCamera();
+}
+
+function pointerDistance(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.hypot(dx, dy);
+}
+
+function pointerMidpoint(a, b) {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function drawBoards() {
+  for (const b of boards) {
+    const el = document.createElement("div");
+    el.className = "board";
+    el.dataset.board = b.name;
+    el.style.left = toPx(b.x) + "px";
+    el.style.top = toPx(b.y) + "px";
+    el.style.width = toPx(b.w) + "px";
+    el.style.height = toPx(b.h) + "px";
+    el.innerHTML = `<div class="board-name">${b.name} ${b.w}x${b.h}cm</div>`;
+    el.addEventListener("pointerdown", e => {
+      if (e.target !== el) return;
+      selectBoard(b.name);
+      select(null);
+    });
+    canvas.appendChild(el);
+  }
+  selectBoard(activeBoardName);
+}
+
+function drawPreviewBase() {
+  previewStage.innerHTML = "";
+  for (const b of boards) {
+    const el = document.createElement("div");
+    el.className = "p3d";
+    el.id = "p3d-" + b.name;
+    el.dataset.board = b.name;
+    el.innerHTML = `<div class="p3d-name">${b.name}</div>`;
+    el.addEventListener("pointerdown", () => {
+      selectBoard(b.name);
+      select(null);
+    });
+    previewStage.appendChild(el);
+  }
+}
+
+function selectBoard(name) {
+  activeBoardName = name;
+  boardSelect.value = name;
+  for (const el of document.querySelectorAll(".board")) {
+    el.classList.toggle("active", el.dataset.board === name);
+  }
+  for (const el of document.querySelectorAll(".p3d")) {
+    el.classList.toggle("active", el.dataset.board === name);
+  }
+  setInfo();
+}
+
+function setInfo(text) {
+  if (text) {
+    info.textContent = text;
+    return;
+  }
+  if (!selected) {
+    info.textContent = "board: " + activeBoardName + " | selected: none";
+    return;
+  }
+  info.textContent =
+    "board: " + selected.dataset.board + " | " +
+    "x " + round(toCm(selected.offsetLeft)) + "cm, " +
+    "y " + round(toCm(selected.offsetTop)) + "cm, " +
+    "w " + round(toCm(selected.offsetWidth)) + "cm, " +
+    "h " + round(toCm(selected.offsetHeight)) + "cm";
+}
+
+function updateTag(el) {
+  el.querySelector(".tag").textContent =
+    round(toCm(el.offsetWidth)) + "cm x " + round(toCm(el.offsetHeight)) + "cm";
+  if (selected === el) setInfo();
+}
+
+function select(el) {
+  for (const item of items) item.classList.remove("selected");
+  selected = el;
+  if (selected) {
+    selected.classList.add("selected");
+    selectBoard(selected.dataset.board);
+  } else {
+    setInfo();
+  }
+}
+
+function fitSizeToBoard(boardName, xPx, yPx, wPx, hPx, ratio) {
+  const b = boardEl(boardName);
+  const maxW = Math.max(toPx(5), b.clientWidth - xPx);
+  const maxH = Math.max(toPx(5), b.clientHeight - yPx);
+  if (wPx > maxW) { wPx = maxW; hPx = wPx / ratio; }
+  if (hPx > maxH) { hPx = maxH; wPx = hPx * ratio; }
+  return { wPx, hPx };
+}
+
+function clampItemToBoard(el) {
+  const b = boardEl(el.dataset.board);
+  const ratio = Number(el.dataset.ratio) || 1;
+  let w = el.offsetWidth;
+  let h = el.offsetHeight;
+  if (w > b.clientWidth) { w = b.clientWidth; h = w / ratio; }
+  if (h > b.clientHeight) { h = b.clientHeight; w = h * ratio; }
+  let x = clamp(el.offsetLeft, 0, b.clientWidth - w);
+  let y = clamp(el.offsetTop, 0, b.clientHeight - h);
+  el.style.left = x + "px";
+  el.style.top = y + "px";
+  el.style.width = w + "px";
+  el.style.height = h + "px";
+  updateTag(el);
+  render3D();
+}
+
+function addImage(src, ratio, boardName, xCm, yCm, wCm, hCm) {
+  ratio = ratio || 1;
+  boardName = boardName || activeBoardName;
+
+  const offset = addOffsets[boardName] || { x: 8, y: 8 };
+  xCm = xCm ?? offset.x;
+  yCm = yCm ?? offset.y;
+  wCm = wCm ?? 45;
+  hCm = hCm ?? (wCm / ratio);
+
+  const board = boardEl(boardName);
+  let xPx = toPx(xCm);
+  let yPx = toPx(yCm);
+  let wPx = toPx(wCm);
+  let hPx = toPx(hCm);
+
+  xPx = clamp(xPx, 0, board.clientWidth - toPx(5));
+  yPx = clamp(yPx, 0, board.clientHeight - toPx(5));
+  const fitted = fitSizeToBoard(boardName, xPx, yPx, wPx, hPx, ratio);
+  wPx = fitted.wPx;
+  hPx = fitted.hPx;
+
+  const el = document.createElement("div");
+  el.className = "item";
+  el.dataset.board = boardName;
+  el.dataset.ratio = ratio;
+  el.dataset.src = src;
+  el.style.left = xPx + "px";
+  el.style.top = yPx + "px";
+  el.style.width = wPx + "px";
+  el.style.height = hPx + "px";
+  el.innerHTML = `<img src="${src}"><div class="tag"></div><div class="handle"></div>`;
+
+  board.appendChild(el);
+  items.push(el);
+  bindItem(el);
+  updateTag(el);
+  select(el);
+  render3D();
+
+  offset.x += 6;
+  offset.y += 6;
+  if (offset.x > 65) offset.x = 8;
+  if (offset.y > 160) offset.y = 8;
+}
+
+function moveSelectedToBoard(newBoardName) {
+  if (!selected) {
+    selectBoard(newBoardName);
+    return;
+  }
+
+  const oldBoardName = selected.dataset.board;
+  if (oldBoardName === newBoardName) return;
+
+  selected.dataset.board = newBoardName;
+  boardEl(newBoardName).appendChild(selected);
+  clampItemToBoard(selected);
+  select(selected);
+  render3D();
+}
+
+function bindItem(el) {
+  el.addEventListener("pointerdown", e => {
+    if (e.target.classList.contains("handle")) return;
+    e.preventDefault();
+    select(el);
+    el.setPointerCapture(e.pointerId);
+
+    const board = boardEl(el.dataset.board);
+    const startPointerX = e.clientX;
+    const startPointerY = e.clientY;
+    const startLeft = el.offsetLeft;
+    const startTop = el.offsetTop;
+
+    function move(ev) {
+      const left = startLeft + ev.clientX - startPointerX;
+      const top = startTop + ev.clientY - startPointerY;
+      el.style.left = clamp(left, 0, board.clientWidth - el.offsetWidth) + "px";
+      el.style.top = clamp(top, 0, board.clientHeight - el.offsetHeight) + "px";
+      setInfo();
+      render3D();
+    }
+
+    function up() {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    }
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  });
+
+  el.querySelector(".handle").addEventListener("pointerdown", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    select(el);
+    el.setPointerCapture(e.pointerId);
+
+    const board = boardEl(el.dataset.board);
+    const startPointerX = e.clientX;
+    const startW = el.offsetWidth;
+    const ratio = Number(el.dataset.ratio) || 1;
+
+    function move(ev) {
+      let w = startW + ev.clientX - startPointerX;
+      const maxW = board.clientWidth - el.offsetLeft;
+      const maxH = board.clientHeight - el.offsetTop;
+      w = clamp(w, toPx(5), maxW);
+      let h = w / ratio;
+      if (h > maxH) {
+        h = maxH;
+        w = h * ratio;
+      }
+      el.style.width = w + "px";
+      el.style.height = h + "px";
+      updateTag(el);
+      setInfo();
+      render3D();
+    }
+
+    function up() {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    }
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  });
+}
+
+function boardAtPoint(clientX, clientY) {
+  for (const b of boards) {
+    const el = boardEl(b.name);
+    const r = el.getBoundingClientRect();
+    if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+      return { name: b.name, rect: r };
+    }
+  }
+  const el = boardEl(activeBoardName);
+  return { name: activeBoardName, rect: el.getBoundingClientRect() };
+}
+
+function loadImageFile(file, boardName, xCm, yCm) {
+  if (!file || !file.type.startsWith("image/")) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = img.naturalWidth / img.naturalHeight || 1;
+      addImage(reader.result, ratio, boardName || activeBoardName, xCm, yCm);
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function convertOldPresetItem(item) {
+  if (item.board) return item;
+  let x = item.xCm || 0;
+  let boardName = "left";
+  if (x >= 300) { boardName = "right"; x -= 300; }
+  else if (x >= 100) { boardName = "middle"; x -= 100; }
+  return {
+    src: item.src,
+    ratio: item.ratio,
+    board: boardName,
+    xCm: x,
+    yCm: item.yCm,
+    wCm: item.wCm,
+    hCm: item.hCm
+  };
+}
+
+function getPresets() {
+  let presets = {};
+  try { presets = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { presets = {}; }
+
+  if (Object.keys(presets).length === 0) {
+    for (const key of OLD_STORAGE_KEYS) {
+      try {
+        const oldPresets = JSON.parse(localStorage.getItem(key)) || {};
+        for (const name in oldPresets) {
+          presets[name] = (oldPresets[name] || []).map(convertOldPresetItem);
+        }
+        if (Object.keys(presets).length) {
+          putPresets(presets);
+          break;
+        }
+      } catch {}
+    }
+  }
+  return presets;
+}
+
+function putPresets(presets) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+}
+
+function refreshPresets() {
+  const old = presetList.value;
+  const names = Object.keys(getPresets()).sort();
+  presetList.innerHTML = "";
+  for (const name of names) {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    presetList.appendChild(opt);
+  }
+  if (names.includes(old)) presetList.value = old;
+}
+
+function saveLayout() {
+  return items.map(el => ({
+    src: el.dataset.src,
+    ratio: Number(el.dataset.ratio) || 1,
+    board: el.dataset.board,
+    xCm: toCm(el.offsetLeft),
+    yCm: toCm(el.offsetTop),
+    wCm: toCm(el.offsetWidth),
+    hCm: toCm(el.offsetHeight)
+  }));
+}
+
+function clearItems() {
+  for (const item of items) item.remove();
+  items = [];
+  selected = null;
+  setInfo();
+  render3D();
+}
+
+function loadLayout(layout) {
+  clearItems();
+  for (const item of layout || []) {
+    addImage(item.src, item.ratio, item.board || "left", item.xCm, item.yCm, item.wCm, item.hCm);
+  }
+  select(null);
+  render3D();
+}
+
+function render3D() {
+  for (const p of document.querySelectorAll(".p3d-item")) p.remove();
+  for (const item of items) {
+    const panel = previewBoardEl(item.dataset.board);
+    if (!panel) continue;
+
+    const box = document.createElement("div");
+    box.className = "p3d-item";
+    box.style.left = toPreviewPx(toCm(item.offsetLeft)) + "px";
+    box.style.top = toPreviewPx(toCm(item.offsetTop)) + "px";
+    box.style.width = toPreviewPx(toCm(item.offsetWidth)) + "px";
+    box.style.height = toPreviewPx(toCm(item.offsetHeight)) + "px";
+    box.innerHTML = `<img src="${item.dataset.src}">`;
+    panel.appendChild(box);
+  }
+}
+
+function bindPreviewCamera() {
+  previewView.addEventListener("contextmenu", e => e.preventDefault());
+
+  previewView.addEventListener("wheel", e => {
+    e.preventDefault();
+    const oldZoom = camera.zoom;
+    const factor = Math.exp(-e.deltaY * 0.001);
+    camera.zoom = clamp(camera.zoom * factor, 0.25, 5);
+
+    const rect = previewView.getBoundingClientRect();
+    const cx = e.clientX - rect.left - rect.width / 2 - camera.panX;
+    const cy = e.clientY - rect.top - rect.height / 2 - camera.panY;
+    const scaleChange = camera.zoom / oldZoom;
+    camera.panX -= cx * (scaleChange - 1);
+    camera.panY -= cy * (scaleChange - 1);
+
+    applyCamera();
+  }, { passive: false });
+
+  previewView.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    previewView.setPointerCapture(e.pointerId);
+    previewPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (previewPointers.size === 1) {
+      const mode = (e.button === 1 || e.button === 2 || e.shiftKey || e.ctrlKey) ? "pan" : "rotate";
+      previewGesture = {
+        mode,
+        startX: e.clientX,
+        startY: e.clientY,
+        rotX: camera.rotX,
+        rotY: camera.rotY,
+        panX: camera.panX,
+        panY: camera.panY
+      };
+    } else if (previewPointers.size === 2) {
+      const pts = [...previewPointers.values()];
+      previewGesture = {
+        mode: "pinch",
+        dist: pointerDistance(pts[0], pts[1]),
+        mid: pointerMidpoint(pts[0], pts[1]),
+        zoom: camera.zoom,
+        panX: camera.panX,
+        panY: camera.panY
+      };
+    }
+  });
+
+  previewView.addEventListener("pointermove", e => {
+    if (!previewPointers.has(e.pointerId)) return;
+    e.preventDefault();
+    previewPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!previewGesture) return;
+
+    if (previewGesture.mode === "rotate" && previewPointers.size === 1) {
+      const dx = e.clientX - previewGesture.startX;
+      const dy = e.clientY - previewGesture.startY;
+      camera.rotY = previewGesture.rotY + dx * 0.35;
+      camera.rotX = clamp(previewGesture.rotX - dy * 0.25, -80, 80);
+      applyCamera();
+    } else if (previewGesture.mode === "pan" && previewPointers.size === 1) {
+      camera.panX = previewGesture.panX + e.clientX - previewGesture.startX;
+      camera.panY = previewGesture.panY + e.clientY - previewGesture.startY;
+      applyCamera();
+    } else if (previewGesture.mode === "pinch" && previewPointers.size >= 2) {
+      const pts = [...previewPointers.values()].slice(0, 2);
+      const dist = pointerDistance(pts[0], pts[1]);
+      const mid = pointerMidpoint(pts[0], pts[1]);
+      camera.zoom = clamp(previewGesture.zoom * (dist / Math.max(1, previewGesture.dist)), 0.25, 5);
+      camera.panX = previewGesture.panX + mid.x - previewGesture.mid.x;
+      camera.panY = previewGesture.panY + mid.y - previewGesture.mid.y;
+      applyCamera();
+    }
+  });
+
+  function endPointer(e) {
+    previewPointers.delete(e.pointerId);
+    if (previewPointers.size === 0) {
+      previewGesture = null;
+    } else if (previewPointers.size === 1) {
+      const p = [...previewPointers.values()][0];
+      previewGesture = {
+        mode: "rotate",
+        startX: p.x,
+        startY: p.y,
+        rotX: camera.rotX,
+        rotY: camera.rotY,
+        panX: camera.panX,
+        panY: camera.panY
+      };
+    }
+  }
+
+  previewView.addEventListener("pointerup", endPointer);
+  previewView.addEventListener("pointercancel", endPointer);
+}
+
+function bindSplitter() {
+  splitter.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    splitter.setPointerCapture(e.pointerId);
+    const startX = e.clientX;
+    const startW = previewView.offsetWidth;
+
+    function move(ev) {
+      const mainW = main.clientWidth;
+      const newW = clamp(startW - (ev.clientX - startX), 220, Math.max(220, mainW - 260));
+      previewView.style.width = newW + "px";
+    }
+
+    function up() {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    }
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  });
+}
+
+files.addEventListener("change", () => {
+  for (const file of files.files) loadImageFile(file, activeBoardName);
+  files.value = "";
+});
+
+boardSelect.addEventListener("change", () => {
+  moveSelectedToBoard(boardSelect.value);
+});
+
+document.addEventListener("paste", e => {
+  const clipboard = e.clipboardData;
+  if (!clipboard) return;
+  for (const item of clipboard.items) {
+    if (item.type.startsWith("image/")) loadImageFile(item.getAsFile(), activeBoardName);
+  }
+});
+
+canvas.addEventListener("dragover", e => e.preventDefault());
+canvas.addEventListener("drop", e => {
+  e.preventDefault();
+  const target = boardAtPoint(e.clientX, e.clientY);
+  const x = toCm(e.clientX - target.rect.left);
+  const y = toCm(e.clientY - target.rect.top);
+  selectBoard(target.name);
+  for (const file of e.dataTransfer.files) loadImageFile(file, target.name, x, y);
+});
+
+saveBtn.addEventListener("click", () => {
+  const name = presetName.value.trim() || new Date().toLocaleString();
+  const presets = getPresets();
+  presets[name] = saveLayout();
+  try {
+    putPresets(presets);
+    refreshPresets();
+    presetList.value = name;
+    setInfo("saved: " + name);
+  } catch {
+    setInfo("save failed: images too large");
+  }
+});
+
+loadBtn.addEventListener("click", () => {
+  const name = presetList.value;
+  if (!name) return;
+  loadLayout(getPresets()[name]);
+  setInfo("loaded: " + name);
+});
+
+deleteBtn.addEventListener("click", () => {
+  const name = presetList.value;
+  if (!name) return;
+  const presets = getPresets();
+  delete presets[name];
+  putPresets(presets);
+  refreshPresets();
+  setInfo("deleted: " + name);
+});
+
+clearBtn.addEventListener("click", clearItems);
+
+previewBtn.addEventListener("click", () => {
+  const hidden = previewView.classList.toggle("hidden");
+  splitter.classList.toggle("hidden", hidden);
+  previewBtn.textContent = hidden ? "show 3d" : "hide 3d";
+});
+
+reset3dBtn.addEventListener("click", resetCamera);
+
+document.addEventListener("keydown", e => {
+  if ((e.key === "Delete" || e.key === "Backspace") && selected) {
+    const index = items.indexOf(selected);
+    if (index >= 0) items.splice(index, 1);
+    selected.remove();
+    selected = null;
+    setInfo();
+    render3D();
+  }
+});
+
+canvas.addEventListener("pointerdown", e => {
+  if (e.target === canvas) select(null);
+});
+
+drawBoards();
+drawPreviewBase();
+bindPreviewCamera();
+bindSplitter();
+refreshPresets();
+selectBoard(activeBoardName);
+applyCamera();
+render3D();
+</script>
+</body>
+</html>
